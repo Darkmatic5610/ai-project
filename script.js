@@ -4,31 +4,7 @@ const ctx = canvas.getContext("2d");
 
 const GRID_SIZE = 15;
 let TILE_SIZE = 15;
-function positionCanvas() {
-    let desiredWidth, desiredHeight, centerX, centerY;
-    centerX = 960;
-    centerY = window.innerHeight * 1.1;
-    if (window.innerWidth >= 700) {
-      desiredWidth = 600;
-      desiredHeight = 600;
-      TILE_SIZE = 40;
-    } else {
-      desiredWidth = 300;
-      desiredHeight = 300;
-      TILE_SIZE = 20;
-      centerX = window.innerWidth * 0.35;
-      centerY = window.innerHeight * 1.1;
-    }
 
-    canvas.width = desiredWidth;
-    canvas.height = desiredHeight;
-
-    canvas.style.left = (centerX - desiredWidth / 2) + 'px';
-    canvas.style.top = (centerY - desiredHeight / 2) + 'px';
-}
-  
-window.addEventListener('resize', positionCanvas);
-positionCanvas();
 
 // UI Elements
 const levelsDisplay = document.getElementById("levels");
