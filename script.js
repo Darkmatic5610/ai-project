@@ -788,7 +788,8 @@ function loadBrainFromTextbox() {
 }
 // === Start the Game Loop ===
 gameLoop();
-</script> < script >
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js').then(() => console.log('Service Worker Registered!'));
-    }
+
+// Extra stuff to make the github webpage to work correctly I guess
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js').then(() => console.log('Service Worker Registered!'));
+}
