@@ -7,7 +7,7 @@ let TILE_SIZE = 15;
 function positionCanvas() {
     let desiredWidth, desiredHeight, centerX, centerY;
     centerX = 960;
-    centerY = window.innerHeight / 1.1;
+    centerY = 400;
     if (window.innerWidth >= 700) {
       desiredWidth = 600;
       desiredHeight = 600;
