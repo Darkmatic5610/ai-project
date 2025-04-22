@@ -1,11 +1,6 @@
 // === Canvas Setup ===
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
-const GRID_SIZE = 15;
-let TILE_SIZE = 20;
-
-
 // UI Elements
 const levelsDisplay = document.getElementById("levels");
 const moveDisplay = document.getElementById("moves");
@@ -16,6 +11,8 @@ let levelCount = 0;
 let aiRunning = false;
 let paused = false;
 let spectateMode = false;
+const TILE_SIZE = 20;
+const GRID_SIZE = 15;
 const TILE = {
     EMPTY: 0,
     WALL: 0.3,
