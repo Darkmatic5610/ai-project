@@ -13,10 +13,23 @@ let paused = false;
 let spectateMode = false;
 let TILE_SIZE = 40;
 const GRID_SIZE = 15;
+
 let phoneMode = true;
+function isMobileDevice() {
+    return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
+if (isMobileDevice()) {
+  console.log("You're on a mobile device!");
+  // You can trigger mobile-specific behavior here
+  phoneMode = true;
+} else {
+  console.log("You're on a desktop!");
+  phoneMode = false;
+}
 function positionCanvas() {
     let desiredWidth, desiredHeight;
-    if (phoneMode) {
+    if (!phoneMode) {
       desiredWidth = 700;
       desiredHeight = 700;
       TILE_SIZE = 40;
