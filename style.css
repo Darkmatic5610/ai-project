@@ -59,3 +59,28 @@ body {
   border-color: #999;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
+.score-box {
+  background-color: #555;
+  color: white;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: monospace;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  transition: background-color 0.3s ease;
+}
+
+.score-box.winning {
+  background-color: #2ecc71; /* green */
+  color: #000;
+}
+
+.score-box.losing {
+  background-color: #e74c3c; /* red */
+  color: #000;
+}
+
+.score-box.tie {
+  background-color: #888;
+  color: white;
+}
