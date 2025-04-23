@@ -10,10 +10,10 @@
 </head>
 <body>
  <div id="ui">
- Levels: <span id="levels">0</span>/10<br>
- Moves: <span id="moves">0</span><br>
+ Steps: <span id="steps">0</span><br>
  Generation: <span id="generation">0</span><br>
- Reward: <span id="reward">0</span><br>
+ Reward P1: <span id="rewardP1">0</span><br>
+ Reward P2: <span id="rewardP2">0</span><br>
  HS: <span id="hs">0</span>
  </div>
  <canvas id="gameCanvas" width="700" height="700"></canvas>
@@ -25,14 +25,22 @@
  <button class="cool-button" onclick="stopAI()">Stop AI</button>
  <button class="cool-button" onclick="testAI()">Test AI</button>
  </div>
+
   
-   <div id="brainEditor" style="position: absolute; top: 550px; left: 10px; width: 300px;">
+ <div id="brainEditor" style="position: absolute; top: 570px; left: 10px; width: 300px;">
    <textarea class="cool-textarea" id="brainData" rows="10" style="width: 100%; font-family: monospace;"></textarea><br>
    <button class="cool-button" onclick="loadBrainFromTextbox()">Load Brain</button>
    <button class="cool-button" onclick="saveBrainToTextbox()">Save Brain</button>
    <button class="cool-button" onclick="positionCanvas()">Phone Mode</button>
  </div>
  
+   <!-- Scoreboard goes here -->
+   <div id="scoreboard-wrapper" style="position: absolute; top: 700px; left: 10px; display: flex; gap: 10px;">
+    <div class="score-box" id="runnerscore">Runner: 0</div>
+    <div class="score-box" id="taggerscore">Tagger: 0</div>
+  </div>
+
+  
 <script src="script.js"></script>
  
 </body>
