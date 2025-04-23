@@ -11,8 +11,34 @@ let levelCount = 0;
 let aiRunning = false;
 let paused = false;
 let spectateMode = false;
-const TILE_SIZE = 20;
+let TILE_SIZE = 40;
 const GRID_SIZE = 15;
+let phoneMode = true;
+function positionCanvas() {
+    let desiredWidth, desiredHeight;
+    if (phoneMode) {
+      desiredWidth = 700;
+      desiredHeight = 700;
+      TILE_SIZE = 40;
+      canvas.style.position = "absolute";
+      canvas.style.left = (700) + 'px';
+        canvas.style.top = (400 - desiredHeight / 2) + 'px';
+        phoneMode = false;
+
+    } else {
+      desiredWidth = 300;
+      desiredHeight = 300;
+      TILE_SIZE = 20;
+      canvas.style.position = "absolute";
+      canvas.style.left = (20) + 'px';
+        canvas.style.top = (350 - desiredHeight / 2) + 'px';
+      phoneMode = true;
+    }
+
+    canvas.width = desiredWidth;
+    canvas.height = desiredHeight;
+}
+positionCanvas();
 const TILE = {
     EMPTY: 0,
     WALL: 0.3,
@@ -789,7 +815,8 @@ function loadBrainFromTextbox() {
 // === Start the Game Loop ===
 gameLoop();
 
-// Extra stuff to make the github webpage to work correctly I guess
-if ('serviceWorker' in navigator) {
+
+ // Extra stuff to make the github webpage to work correctly I guess
+ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').then(() => console.log('Service Worker Registered!'));
 }
