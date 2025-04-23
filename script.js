@@ -2,11 +2,14 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 // UI Elements
-const levelsDisplay = document.getElementById("levels");
-const moveDisplay = document.getElementById("moves");
+const stepDisplay = document.getElementById("steps");
 const generationDisplay = document.getElementById("generation");
-const rewardDisplay = document.getElementById("reward");
+const rewardP1Display = document.getElementById("rewardP1");
+const rewardP2Display = document.getElementById("rewardP2");
 const hsDisplay = document.getElementById("hs");
+const elR = document.getElementById("runnerscore");
+const elT = document.getElementById("taggerscore");
+
 let levelCount = 0;
 let aiRunning = false;
 let paused = false;
@@ -14,94 +17,100 @@ let spectateMode = false;
 let TILE_SIZE = 40;
 const GRID_SIZE = 15;
 
-let phoneMode = true;
+let phoneMode = false;
 function isMobileDevice() {
     return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  }
-
-if (isMobileDevice()) {
-  console.log("You're on a mobile device!");
-  // You can trigger mobile-specific behavior here
-  phoneMode = true;
-} else {
-  console.log("You're on a desktop!");
-  phoneMode = false;
 }
+function testMobile() {
+    if (isMobileDevice()) {
+        console.log("You're on a mobile device!");
+        // You can trigger mobile-specific behavior here
+        phoneMode = true;
+      } else {
+        console.log("You're on a desktop!");
+        phoneMode = false;
+      }
+}
+testMobile();
+
 function positionCanvas() {
     let desiredWidth, desiredHeight;
     if (!phoneMode) {
+    phoneMode = true;
       desiredWidth = 700;
       desiredHeight = 700;
       TILE_SIZE = 40;
       canvas.style.position = "absolute";
       canvas.style.left = (700) + 'px';
         canvas.style.top = (400 - desiredHeight / 2) + 'px';
-        phoneMode = false;
 
     } else {
+        phoneMode = false;
       desiredWidth = 300;
       desiredHeight = 300;
       TILE_SIZE = 20;
       canvas.style.position = "absolute";
       canvas.style.left = (20) + 'px';
         canvas.style.top = (350 - desiredHeight / 2) + 'px';
-      phoneMode = true;
     }
 
     canvas.width = desiredWidth;
     canvas.height = desiredHeight;
 }
 positionCanvas();
+
+
 const TILE = {
     EMPTY: 0,
     WALL: 0.3,
-    BOX: 0.7,
-    GOAL: 1,
-    PLAYER: 2
+    TAGGER: 1,
+    RUNNER: 0.99
 };
 // Keyboard input
 const keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 // Controls
-const controls = {
-    forward: false,
-    left: false,
-    right: false,
-    down: false
-};
-const AIControls = {
-    forward: false,
-    left: false,
-    right: false,
-    down: false
-};
+ // Controls
+ const controls1 = { forward: false, left: false, right: false, down: false};
+ const controls2 = { forward: false, left: false, right: false, down: false};
+ const AI1Controls = { forward: false, left: false, right: false, down: false };
+ const AI2Controls = { forward: false, left: false, right: false, down: false };
 // Level definitions
-let player = {
+let tagger = {
     x: 0,
-    y: 0
+    y: 0,
+    win: false,
+    population:[]
 };
-let box = {
+let runner = {
     x: 0,
-    y: 0
+    y: 0,
+    win: false,
+    population:[]
 };
-let goal = {
-    x: 0,
-    y: 0
-};
+let taggerScore = 0;
+let runnerScore = 0;
 let moves = 0;
 let grid = [];
+let stepLoop = 0;
 
-function resetGame(fullGame = false) {
+function resetGame() {
     moves = 0;
-    if (fullGame) {
-        levelCount = 0;
-        levelsDisplay.textContent = levelCount;
-    }
     //Empty the Grid
     grid = Array.from({
         length: GRID_SIZE
     }, () => Array(GRID_SIZE).fill(TILE.EMPTY));
+
+    if(runner.win || tagger.win) {
+        if (runner.win) {
+          runnerScore++;
+        }
+        if (tagger.win) {
+          taggerScore++;
+        }
+    }
+
     // Place walls around the border
     for (let i = 0; i < GRID_SIZE; i++) {
         grid[0][i] = TILE.WALL;
@@ -110,269 +119,56 @@ function resetGame(fullGame = false) {
         grid[i][GRID_SIZE - 1] = TILE.WALL;
     }
     // Custom level design 
-    switch (levelCount) {
-        case 0:
-            player = {
-                x: 2,
-                y: 2
-            };
-            box = {
-                x: 6,
-                y: 2
-            };
-            goal = {
-                x: 10,
-                y: 2
-            };
-            break;
-        case 1:
-            player = {
-                x: 10,
-                y: 13
-            };
-            box = {
-                x: 10,
-                y: 4
-            };
-            goal = {
-                x: 10,
-                y: 2
-            };
-            break;
-        case 2:
-            player = {
-                x: 2,
-                y: 3
-            };
-            box = {
-                x: 4,
-                y: 2
-            };
-            goal = {
-                x: 10,
-                y: 2
-            };
-            break;
-        case 3:
-            player = {
-                x: 8,
-                y: 4
-            };
-            box = {
-                x: 6,
-                y: 2
-            };
-            goal = {
-                x: 2,
-                y: 2
-            };
-            break;
-        case 4:
-            player = {
-                x: 2,
-                y: 6
-            };
-            box = {
-                x: 8,
-                y: 6
-            };
-            goal = {
-                x: 12,
-                y: 6
-            };
-            grid[6][5] = TILE.WALL;
-            break;
-        case 5:
-            player = {
-                x: 12,
-                y: 6
-            };
-            box = {
-                x: 5,
-                y: 6
-            };
-            goal = {
-                x: 2,
-                y: 6
-            };
-            grid[6][8] = TILE.WALL;
-            break;
-        case 6:
-            player = {
-                x: 13,
-                y: 13
-            };
-            box = {
-                x: 3,
-                y: 12
-            };
-            goal = {
-                x: 3,
-                y: 5
-            };
-            grid[7][5] = TILE.WALL;
-            grid[8][6] = TILE.WALL;
-            grid[12][7] = TILE.WALL;
-            grid[3][8] = TILE.WALL;
-            break;
-        case 7:
-            player = {
-                x: 13,
-                y: 13
-            };
-            box = {
-                x: 8,
-                y: 8
-            };
-            goal = {
-                x: 1,
-                y: 1
-            };
-            break;
-        case 8:
-            player = {
-                x: 13,
-                y: 13
-            };
-            box = {
-                x: 2,
-                y: 11
-            };
-            goal = {
-                x: 1,
-                y: 1
-            };
-            grid[13][5] = TILE.WALL;
-            grid[12][5] = TILE.WALL;
-            grid[11][5] = TILE.WALL;
-            grid[10][5] = TILE.WALL;
-            break;
-        case 9:
-            player = {
-                x: 13,
-                y: 13
-            };
-            box = {
-                x: 8,
-                y: 11
-            };
-            goal = {
-                x: 1,
-                y: 1
-            };
-            grid[13][5] = TILE.WALL;
-            grid[12][5] = TILE.WALL;
-            grid[11][5] = TILE.WALL;
-            grid[10][5] = TILE.WALL;
-            grid[9][5] = TILE.WALL;
-            grid[8][5] = TILE.WALL;
-            grid[7][5] = TILE.WALL;
-            grid[6][5] = TILE.WALL;
-            grid[2][5] = TILE.WALL;
-            grid[1][5] = TILE.WALL;
-            break;
-        case 50:
-            player = {
-                x: 13,
-                y: 13
-            };
-            box = {
-                x: 8,
-                y: 11
-            };
-            goal = {
-                x: 1,
-                y: 1
-            };
-            grid[13][5] = TILE.WALL;
-            grid[12][5] = TILE.WALL;
-            grid[11][5] = TILE.WALL;
-            grid[10][5] = TILE.WALL;
-            grid[9][5] = TILE.WALL;
-            grid[8][5] = TILE.WALL;
-            grid[7][5] = TILE.WALL;
-            grid[6][5] = TILE.WALL;
-            grid[2][5] = TILE.WALL;
-            grid[1][5] = TILE.WALL;
-            grid[13][7] = TILE.WALL;
-            grid[12][7] = TILE.WALL;
-            grid[8][7] = TILE.WALL;
-            grid[7][7] = TILE.WALL;
-            grid[6][7] = TILE.WALL;
-            grid[5][7] = TILE.WALL;
-            grid[4][8] = TILE.WALL;
-            grid[3][7] = TILE.WALL;
-            grid[2][7] = TILE.WALL;
-            grid[1][7] = TILE.WALL;
-            break;
-        case 150:
-            player = {
-                x: 2,
-                y: 2
-            };
-            box = {
-                x: 6,
-                y: 2
-            };
-            goal = {
-                x: 14,
-                y: 14
-            };
-            grid[13][13] = TILE.WALL;
-            grid[12][13] = TILE.WALL;
-            break;
-        default:
-            player = {
-                x: Math.round((Math.random() * 12 + 1)),
-                y: Math.round((Math.random() * 12 + 1))
-            };
-            box = {
-                x: Math.round((Math.random() * 10 + 2)),
-                y: Math.round((Math.random() * 10 + 2))
-            };
-            while (box.x === player.x && box.y === player.y) {
-                box = {
-                    x: Math.round((Math.random() * 10 + 2)),
-                    y: Math.round((Math.random() * 10 + 2))
-                };
-            }
-            goal = {
-                x: Math.round((Math.random() * 12 + 1)),
-                y: Math.round((Math.random() * 12 + 1))
-            };
-            while (goal.x === player.x && goal.y === player.y) {
-                goal = {
-                    x: Math.round((Math.random() * 12 + 1)),
-                    y: Math.round((Math.random() * 12 + 1))
-                };
-            }
-            while (goal.x === box.x && goal.y === box.y) {
-                goal = {
-                    x: Math.round((Math.random() * 12 + 1)),
-                    y: Math.round((Math.random() * 12 + 1))
-                };
-            }
+    tagger = {
+        x: 3,
+        y: 3
+    };
+    runner = {
+        x: 9,
+        y: 3
     }
+    tagger = { x:tagger.x, y:tagger.y, 
+        win:false,
+        population:[]
+    };
+      runner = { x:runner.x, y:runner.y,
+        win:false,
+        population:[]
+    };
     //Make sure grid is correct
-    grid[box.y][box.x] = TILE.BOX;
-    grid[player.y][player.x] = TILE.PLAYER;
-    grid[goal.y][goal.x] = TILE.GOAL;
+    grid[tagger.y][tagger.x] = TILE.TAGGER;
+    grid[runner.y][runner.x] = TILE.RUNNER;
 }
-resetGame(true);
+resetGame();
 // === Control Logic ===
-function updateControls() {
+function updateP1Controls() {
     if (aiRunning) {
-        controls.forward = AIControls.forward;
-        controls.left = AIControls.left;
-        controls.right = AIControls.right;
-        controls.down = AIControls.down;
+      controls1.forward = AI1Controls.forward;
+      controls1.left = AI1Controls.left;
+      controls1.right = AI1Controls.right;
+      controls1.down = AI1Controls.down;
     } else {
-        controls.forward = keys["ArrowUp"];
-        controls.left = keys["ArrowLeft"];
-        controls.right = keys["ArrowRight"];
-        controls.down = keys["ArrowDown"];
+      controls1.forward = keys["ArrowUp"];
+      controls1.left = keys["ArrowLeft"];
+      controls1.right = keys["ArrowRight"];
+      controls1.down = keys["ArrowDown"];
     }
-}
+  }
+  
+  function updateP2Controls() {
+    if (aiRunning) {
+      controls2.forward = AI2Controls.forward;
+      controls2.left = AI2Controls.left;
+      controls2.right = AI2Controls.right;
+      controls2.down = AI2Controls.down;
+    } else {
+      controls2.forward = keys["w"];
+      controls2.left = keys["a"];
+      controls2.right = keys["d"];
+      controls2.down = keys["s"];
+    }
+  }
+
 let runningBest = false;
 // === Drawing Functions ===
 function drawGrid() {
@@ -383,16 +179,16 @@ function drawGrid() {
                 case TILE.WALL:
                     ctx.fillStyle = "#555";
                     break;
-                case TILE.GOAL:
-                    ctx.fillStyle = "gold";
-                    break;
-                case TILE.BOX:
-                    ctx.fillStyle = "#701f27";
-                    break;
-                case TILE.PLAYER:
+                case TILE.TAGGER:
                     ctx.fillStyle = "#3b48bf";
                     if (runningBest) {
                         ctx.fillStyle = "#1b2157";
+                    }
+                    break;
+                case TILE.RUNNER:
+                    ctx.fillStyle = "#f5aa42";
+                    if(runningBest) {
+                      ctx.fillStyle = "#966724";
                     }
                     break;
                 default:
@@ -402,54 +198,77 @@ function drawGrid() {
         }
     }
 }
+
+function updateScores() {
+    elR.textContent = "Runner: " + runnerScore;
+    elT.textContent = "Tagger: " + taggerScore;
+  
+    // Remove all state classes
+    elR.classList.remove("winning", "losing", "tie");
+    elT.classList.remove("winning", "losing", "tie");
+  
+    if (runnerScore > taggerScore) {
+      elR.classList.add("winning");
+      elT.classList.add("losing");
+    } else if (taggerScore > runnerScore) {
+      elR.classList.add("losing");
+      elT.classList.add("winning");
+    } else {
+      elR.classList.add("tie");
+      elT.classList.add("tie");
+    }
+  }
+
 // === Update Functions ===
-function isWalkable(x, y) {
-    return grid[y][x] !== TILE.WALL && (player.x !== x || player.y !== y);
+ function isWalkable(x, y, resCol = false) {
+  if(resCol) {
+    return grid[y][x] !== TILE.RUNNER && grid[y][x] !== TILE.TAGGER;
+  }else {
+    return grid[y][x] !== TILE.WALL && grid[y][x] !== TILE.RUNNER && grid[y][x] !== TILE.TAGGER;
+  }
+ }
+
+function moveplayer(player, tiletype, dy, dx) {
+  //Make sure the grid doesn't have multiple objects
+  const nx = player.x + dx;
+  const ny = player.y + dy;
+
+  if (isWalkable(nx, ny)  && (dx != 0 || dy != 0)) {
+   grid[player.y][player.x] = TILE.EMPTY;
+   player.x = nx;
+   player.y = ny;
+   moves++;
+  } else if (grid[ny][nx] === TILE.RUNNER && tiletype === TILE.TAGGER) {
+    // A runner got tagged by a tagger
+    tagger.win = true;
+    resetGame();
+    stepLoop = 0;
+    return;
+  }
+
+  //Make sure grid is correct
+  grid[player.y][player.x] = tiletype;
 }
 
-function movePlayer(dy, dx) {
-    //Make sure the grid doesn't have multiple boxes or players
-    grid[box.y][box.x] = TILE.EMPTY;
-    const nx = player.x + dx;
-    const ny = player.y + dy;
-    if (box.x === nx && box.y === ny) {
-        const nx2 = box.x + dx;
-        const ny2 = box.y + dy;
-        if (isWalkable(nx2, ny2) && (dx != 0 || dy != 0)) {
-            grid[player.y][player.x] = TILE.EMPTY;
-            box.x = nx2;
-            box.y = ny2;
-            player.x = nx;
-            player.y = ny;
-            moves++;
-        }
-    } else if (isWalkable(nx, ny) && (dx != 0 || dy != 0)) {
-        grid[player.y][player.x] = TILE.EMPTY;
-        player.x = nx;
-        player.y = ny;
-        moves++;
-    }
-    //Make sure grid is correct
-    grid[box.y][box.x] = TILE.BOX;
-    grid[player.y][player.x] = TILE.PLAYER;
-    moveDisplay.textContent = moves;
+function updatetagger() {
+  updateP1Controls();
+  const dy = (controls1.forward ? -1 : 0) + (controls1.down ? 1 : 0); 
+  const dx = (controls1.left ? -1 : 0) + (controls1.right ? 1 : 0);
+  moveplayer(tagger, TILE.TAGGER, dy, dx);
 }
 
-function updatePlayer() {
-    updateControls();
-    const dy = (controls.forward ? -1 : 0) + (controls.down ? 1 : 0);
-    const dx = (controls.left ? -1 : 0) + (controls.right ? 1 : 0);
-    movePlayer(dy, dx);
-}
+function updaterunner() {
+    updateP2Controls();
+    const dy = (controls2.forward ? -1 : 0) + (controls2.down ? 1 : 0); 
+    const dx = (controls2.left ? -1 : 0) + (controls2.right ? 1 : 0);
+    moveplayer(runner, TILE.RUNNER, dy, dx);
+  }
+  
 
-function updateGame() {
-    updatePlayer();
-    grid[goal.y][goal.x] = TILE.GOAL;
-    if (box.x === goal.x && box.y === goal.y) {
-        levelCount++;
-        resetGame();
-    }
-}
+  function updateGame() {
+    updatetagger();
+    updaterunner();
+  }
 
 function pauseGame() {
     paused = true;
@@ -462,24 +281,49 @@ function resumeGame() {
 function renderGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawGrid();
-    levelsDisplay.textContent = levelCount;
 }
-// === Game Loop ===
-async function gameLoop() {
+  // === Game Loop ===
+  async function gameLoop() {
     if (!paused) {
+      try {
         updateGame();
-        levelsDisplay.textContent = levelCount;
-        let distanceBox = Math.abs(goal.x - box.x) + Math.abs(goal.y - box.y);
-        let distancePlayer = Math.abs(goal.x - box.x) + Math.abs(goal.y - box.y);
-        let reward = levelCount * 1000 - distanceBox * 30 - distancePlayer * 15;
-        rewardDisplay.textContent = reward;
-        generationDisplay.textContent = "No AI Running";
+      } catch (e) {
+        console.error("updateGame() error: ", e);
+      }
+
+      try {
         renderGame();
-        // Wait 30 ms before continuing
-        await new Promise(r => setTimeout(r, 80));
-        requestAnimationFrame(gameLoop);
+      } catch (e) {
+        console.error("renderGame() error: ", e);
+      }
+      try {
+      updateScores();
+      } catch (e) {
+        console.error("Update Scores error: ", e);
+      }
+
+      let reward = 1000;
+      rewardP1Display.textContent = reward;
+      generationDisplay.textContent = "No AI Running";
+      stepLoop++;
+      stepDisplay.textContent = stepLoop;
+      try {
+      if(stepLoop >= 50) {
+        stepLoop = 0;
+        runner.win = true;
+        resetGame();
+      }
+    } catch(e) {
+      console.error("Runner win error: ", e);
     }
-}
+
+      // Wait 30 ms before continuing
+      await new Promise(r => setTimeout(r, 80));
+
+      requestAnimationFrame(gameLoop);
+    }
+  }
+
 // === UI Button Functions ===
 function startAI() {
     pauseGame();
@@ -533,62 +377,6 @@ const HIDDEN5_COUNT = 20; // fifth hidden layer
 const HIDDEN6_COUNT = 20; // sixth hidden layer 
 const RENDER_INTERVAL = 423432;
 const RENDER_STEPS = 1;
-//Renders the AI 
-function drawNeuralNetworkVisualization() {
-    const vizCanvas = document.getElementById('aiVisualizer');
-    const vizCtx = vizCanvas.getContext('2d');
-    vizCanvas.width = vizCanvas.clientWidth;
-    vizCanvas.height = vizCanvas.clientHeight;
-    vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
-    const layerCounts = [
-        INPUT_COUNT,
-        HIDDEN1_COUNT,
-        HIDDEN2_COUNT,
-        HIDDEN3_COUNT,
-        HIDDEN4_COUNT,
-        HIDDEN5_COUNT,
-        HIDDEN6_COUNT,
-        OUTPUT_COUNT
-    ];
-    const layerSpacing = vizCanvas.width / (layerCounts.length - 0.5);
-    const radius = 4;
-    const nodePositions = [];
-    for (let i = 0; i < layerCounts.length; i++) {
-        const count = layerCounts[i];
-        const ySpacing = vizCanvas.height / (count + 1);
-        const positions = [];
-        for (let j = 0; j < count; j++) {
-            const x = i * layerSpacing + 5;
-            const y = (j + 1) * ySpacing;
-            positions.push({
-                x,
-                y
-            });
-        }
-        nodePositions.push(positions);
-    }
-    // Draw connections
-    vizCtx.strokeStyle = "#888";
-    for (let i = 0; i < nodePositions.length - 1; i++) {
-        for (const from of nodePositions[i]) {
-            for (const to of nodePositions[i + 1]) {
-                vizCtx.beginPath();
-                vizCtx.moveTo(from.x, from.y);
-                vizCtx.lineTo(to.x, to.y);
-                vizCtx.stroke();
-            }
-        }
-    }
-    // Draw nodes
-    vizCtx.fillStyle = "#000";
-    for (const layer of nodePositions) {
-        for (const node of layer) {
-            vizCtx.beginPath();
-            vizCtx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-            vizCtx.fill();
-        }
-    }
-}
 
 function createRandomBrain() {
     const weights = [];
@@ -667,14 +455,14 @@ function feedForward(inputs, brain) {
     return current; // final output layer
 }
 
-function getInputs(memory = [0, 0, 0, 0, 0, 0, 0, 0]) {
+function getInputs(memory = [0, 0, 0, 0, 0, 0, 0, 0], main, second) {
     const inputs = [];
     // 5x5 vision (excluding center tile at dx=0, dy=0)
     for (let dy = -2; dy <= 2; dy++) {
         for (let dx = -2; dx <= 2; dx++) {
-            if (dx === 0 && dy === 0) continue; // Skip the player tile
-            const x = player.x + dx;
-            const y = player.y + dy;
+            if (dx === 0 && dy === 0) continue; // Skip the tagger tile
+            const x = main.x + dx;
+            const y = main.y + dy;
             // Out of bounds = wall
             if (x < 0 || x >= 15 || y < 0 || y >= 15) {
                 inputs.push(0.33); // wall
@@ -685,12 +473,12 @@ function getInputs(memory = [0, 0, 0, 0, 0, 0, 0, 0]) {
             }
         }
     }
-    // Relative box position normalized
-    inputs.push((box.x - player.x) / 15);
-    inputs.push((box.y - player.y) / 15);
-    // Relative box position normalized
-    inputs.push((goal.x - player.x) / 15);
-    inputs.push((goal.y - player.y) / 15);
+    // Relative position normalized
+    inputs.push((main.x) / 15);
+    inputs.push((main.y) / 15);
+    // Relative other position normalized
+    inputs.push((second.x - main.x) / 15);
+    inputs.push((second.y - main.y) / 15);
     // Short-term memory (8 values)
     for (let i = 0; i < 8; i++) {
         inputs.push(memory[i] ?? 0);
@@ -733,47 +521,32 @@ async function runAI() {
             nextGeneration();
             return;
         }
-        resetGame(true);
+        resetGame();
         const brain = population[currentIndex];
         let steps = 0;
-        let nomove = 0;
-        let maxSteps = 30;
-        let outofBounds = false;
+        let maxSteps = 50;
         let memory = [0, 0, 0, 0, 0, 0, 0, 0];
-        let lastX = player.x;
-        let lastY = player.y;
         // Determine if this AI should be partially rendered
         const renderThisOne = currentIndex % RENDER_INTERVAL === 0;
         async function step() {
-            while (steps < maxSteps && aiRunning && !outofBounds) {
-                const inputs = getInputs(memory);
+            while (steps < maxSteps && aiRunning) {
+                const inputs = getInputs(memory, tagger, runner);
                 const outputs = feedForward(inputs, brain);
                 memory = outputs.slice(4);
-                AIControls.forward = outputs[0] > 0.5;
-                AIControls.left = outputs[1] > 0.5;
-                AIControls.right = outputs[2] > 0.5;
-                AIControls.down = outputs[3] > 0.5;
-                lastX = player.x;
-                lastY = player.y;
+                AI1Controls.forward = outputs[0] > 0.5;
+                AI1Controls.left = outputs[1] > 0.5;
+                AI1Controls.right = outputs[2] > 0.5;
+                AI1Controls.down = outputs[3] > 0.5;
+
                 updateGame();
-                if (player.x === lastX && player.y === lastY) {
-                    nomove++;
-                } else {
-                    nomove = 0;
-                    lastX = player.x;
-                    lastY = player.y;
-                }
-                maxSteps = 30 + levelCount * 50;
-                if (nomove > 3) {
-                    outofBounds = true; //Resets the AI so it doesn't run for unnecessary time
-                }
+
                 if (spectateMode) {
                     if (currentIndex === 1) {
                         runningBest = true;
                     } else {
                         runningBest = false;
                     }
-                    rewardDisplay.textContent = memory;
+                    rewardP1Display.textContent = memory;
                     renderGame();
                     await new Promise(r => setTimeout(r, 100)); // Let browser breathe
                 }
@@ -783,10 +556,8 @@ async function runAI() {
                 renderGame();
                 await new Promise(r => setTimeout(r, 0)); // Let browser breathe
             }
-            let distanceBox = Math.abs(goal.x - box.x) + Math.abs(goal.y - box.y);
-            let distancePlayer = Math.abs(box.x - player.x) + Math.abs(box.y - player.y);
-            brain.fitness = levelCount * 1000 - distanceBox * 30 - distancePlayer * 20 - steps * 0.005;
-            rewardDisplay.textContent = brain.fitness;
+            brain.fitness = steps * 0.005;
+            rewardP1Display.textContent = brain.fitness;
             if (highestReward < brain.fitness) {
                 highestReward = brain.fitness;
                 bestBrain = brain;
