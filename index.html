@@ -16,8 +16,7 @@
  Reward: <span id="reward">0</span><br>
  HS: <span id="hs">0</span>
  </div>
-
- <canvas id="gameCanvas" width="300" height="300"></canvas>
+ <canvas id="gameCanvas" width="700" height="700"></canvas>
 
  <!-- Add inside <body> just before </body> -->
  <div id="buttons" style="position: absolute; top: 130px; left: 10px;"> 
@@ -26,11 +25,12 @@
  <button class="cool-button" onclick="stopAI()">Stop AI</button>
  <button class="cool-button" onclick="testAI()">Test AI</button>
  </div>
-
- <div id="brainEditor" style="position: absolute; top: 550px; left: 10px; width: 300px;">
- <textarea class="cool-textarea" id="brainData" rows="10" style="width: 100%; font-family: monospace;"></textarea><br>
- <button class="cool-button" onclick="loadBrainFromTextbox()">Load Brain</button>
- <button class="cool-button" onclick="saveBrainToTextbox()">Save Brain</button>
+  
+   <div id="brainEditor" style="position: absolute; top: 550px; left: 10px; width: 300px;">
+   <textarea class="cool-textarea" id="brainData" rows="10" style="width: 100%; font-family: monospace;"></textarea><br>
+   <button class="cool-button" onclick="loadBrainFromTextbox()">Load Brain</button>
+   <button class="cool-button" onclick="saveBrainToTextbox()">Save Brain</button>
+   <button class="cool-button" onclick="positionCanvas()">Phone Mode</button>
  </div>
  
 <script src="script.js"></script>
