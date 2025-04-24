@@ -119,6 +119,8 @@ function resetGame() {
         grid[i][GRID_SIZE - 1] = TILE.WALL;
     }
     // Custom level design 
+    pop1 = tagger.population;
+    pop2 = runner.population;
     tagger = {
         x: 3,
         y: 3
@@ -129,11 +131,11 @@ function resetGame() {
     }
     tagger = { x:tagger.x, y:tagger.y, 
         win:false,
-        population:[]
+        population:pop1
     };
       runner = { x:runner.x, y:runner.y,
         win:false,
-        population:[]
+        population:pop2
     };
     //Make sure grid is correct
     grid[tagger.y][tagger.x] = TILE.TAGGER;
@@ -301,8 +303,8 @@ function renderGame() {
       } catch (e) {
         console.error("Update Scores error: ", e);
       }
-
-      let reward = 1000;
+      let dist = Math.sqrt(Math.pow(tagger.x - runner.x, 2) + Math.pow(tagger.y - runner.y, 2));
+      let reward = 15 - dist;
       rewardP1Display.textContent = reward;
       generationDisplay.textContent = "No AI Running";
       stepLoop++;
@@ -398,7 +400,7 @@ function createRandomBrain() {
         }
     }
     return {
-        weights,
+        weights: weights,
         fitness: 0
     };
 }
@@ -487,58 +489,91 @@ function getInputs(memory = [0, 0, 0, 0, 0, 0, 0, 0], main, second) {
     inputs.push(1);
     return inputs;
 }
+
 // === AI Main Loop ===
 async function runAI() {
-    population = [];
+    tagger.population = [];
     for (let i = 0; i < POP_SIZE; i++) {
-        population.push(createRandomBrain());
+        try {
+            tagger.population.push(createRandomBrain());
+        } catch (e) {
+            console.error("Error creating random brain:", e);
+        }
+    }
+    runner.population = [];
+    for (let i = 0; i < POP_SIZE; i++) {
+        try {
+            runner.population.push(createRandomBrain());
+        } catch (e) {
+            console.error("Error creating random brain:", e);
+        }
     }
     generation = 0;
     let currentIndex = 0;
-    bestBrain = population[1];
+    bestBrain = tagger.population[1];
 
-    function nextGeneration() {
-        population.sort((a, b) => b.fitness - a.fitness);
-        const elites = population.slice(0, ELITE_COUNT);
-        population = [];
-        while (population.length < (POP_SIZE)) {
+    function nextGeneration(player) {
+        player.population.sort((a, b) => b.fitness - a.fitness);
+        const elites = player.population.slice(0, ELITE_COUNT);
+        player.population = [];
+        while (player.population.length < (POP_SIZE)) {
             const parent = elites[Math.floor(Math.random() * elites.length)];
-            if (population.length === 1 || testing) {
-                population.push(bestBrain);
+            if (player.population.length === 1 || testing) {
+                player.population.push(bestBrain);
             } else {
-                population.push(mutateBrain(parent));
+                player.population.push(mutateBrain(parent));
             }
         }
-        generation++;
-        currentIndex = 0;
-        //console.log("Generation", generation);
-        generationDisplay.textContent = generation;
-        evaluateNext();
     }
 
     function evaluateNext() {
         if (!aiRunning || currentIndex >= POP_SIZE) {
-            nextGeneration();
+            nextGeneration(tagger);
+            nextGeneration(runner);
+            generation++;
+        currentIndex = 0;
+        console.log("Generation", generation);
+        generationDisplay.textContent = generation;
+        evaluateNext();
             return;
         }
         resetGame();
-        const brain = population[currentIndex];
+        const brainP1 = tagger.population[currentIndex];
+        const brainP2 = runner.population[currentIndex];
         let steps = 0;
         let maxSteps = 50;
-        let memory = [0, 0, 0, 0, 0, 0, 0, 0];
+        let memory1 = [0, 0, 0, 0, 0, 0, 0, 0];
+        let memory2 = [0, 0, 0, 0, 0, 0, 0, 0];
+        let endEarly = false;
         // Determine if this AI should be partially rendered
         const renderThisOne = currentIndex % RENDER_INTERVAL === 0;
         async function step() {
-            while (steps < maxSteps && aiRunning) {
-                const inputs = getInputs(memory, tagger, runner);
-                const outputs = feedForward(inputs, brain);
-                memory = outputs.slice(4);
-                AI1Controls.forward = outputs[0] > 0.5;
-                AI1Controls.left = outputs[1] > 0.5;
-                AI1Controls.right = outputs[2] > 0.5;
-                AI1Controls.down = outputs[3] > 0.5;
+            while (steps < maxSteps && aiRunning && !endEarly) {
+                const inputsP1 = getInputs(memory1, tagger, runner);
+                const outputsP1 = feedForward(inputsP1, brainP1);
+                memory1 = outputsP1.slice(4);
+                AI1Controls.forward = outputsP1[0] > 0.5;
+                AI1Controls.left = outputsP1[1] > 0.5;
+                AI1Controls.right = outputsP1[2] > 0.5;
+                AI1Controls.down = outputsP1[3] > 0.5;
 
-                updateGame();
+                const inputsP2 = getInputs(memory2, runner, tagger);
+                const outputsP2 = feedForward(inputsP2, brainP2);
+                memory2 = outputsP2.slice(4);
+                AI2Controls.forward = outputsP2[0] > 0.5;
+                AI2Controls.left = outputsP2[1] > 0.5;
+                AI2Controls.right = outputsP2[2] > 0.5;
+                AI2Controls.down = outputsP2[3] > 0.5;
+
+                updatetagger();
+                if (outputsP1[0] > 0.8 || outputsP1[1] > 0.8 || outputsP1[2] > 0.8 || outputsP1[3] > 0.8) {
+                    updatetagger();
+                }
+                updaterunner();
+                
+                if (tagger.win) {
+                    endEarly = true;
+                }
 
                 if (spectateMode) {
                     if (currentIndex === 1) {
@@ -546,8 +581,10 @@ async function runAI() {
                     } else {
                         runningBest = false;
                     }
-                    rewardP1Display.textContent = memory;
+                    rewardP1Display.textContent = memory1;
+                    rewardP2Display.textContent = memory2;
                     renderGame();
+                    console.log("Steps: ", steps);
                     await new Promise(r => setTimeout(r, 100)); // Let browser breathe
                 }
                 steps++;
@@ -556,11 +593,18 @@ async function runAI() {
                 renderGame();
                 await new Promise(r => setTimeout(r, 0)); // Let browser breathe
             }
-            brain.fitness = steps * 0.005;
-            rewardP1Display.textContent = brain.fitness;
-            if (highestReward < brain.fitness) {
-                highestReward = brain.fitness;
-                bestBrain = brain;
+            if (!tagger.win) {
+                runner.win = true;
+            }
+            let dist = Math.sqrt(Math.pow(tagger.x - runner.x, 2) + Math.pow(tagger.y - runner.y, 2));
+            brainP1.fitness = steps * 0.005 + (tagger.win ? 200 : 0) + 15 - 2 * (dist);
+            brainP2.fitness = steps * 0.005 + (runner.win ? 200 : 0) + 2 * (dist);
+            rewardP1Display.textContent = brainP1.fitness;
+            rewardP2Display.textContent = brainP2.fitness;
+            updateScores();
+            if (highestReward < brainP1.fitness) {
+                highestReward = brainP1.fitness;
+                bestBrain = brainP1;
             }
             hsDisplay.textContent = highestReward;
             currentIndex++;
